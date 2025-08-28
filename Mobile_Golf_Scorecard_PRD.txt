@@ -1,0 +1,236 @@
+PRD — Mobile Golf Scorecard (Offline, Browser-Saved)
+
+1) OVERVIEW
+A lightweight, mobile-first web app (PWA-ready) to keep score for a round of golf. Players enter names, set per-hole par values, enter strokes per hole, and view running totals. At round end, the app shows: gross score, score vs par, estimated handicap differential (see 8), and the winner. All data is saved locally in the browser; a Reset action wipes it.
+
+2) GOALS & NON-GOALS
+Goals
+- Fast, tap-friendly score entry for 9 or 18 holes.
+- Support 1–6 players (default 2).
+- Custom par per hole (defaults provided).
+- Show per-player: Front 9, Back 9, Total, vs Par, estimated handicap differential.
+- Determine winner (lowest total strokes by default).
+- Persist state in browser (localStorage); explicit Reset clears everything.
+
+Non-Goals (MVP)
+- No login/accounts/cloud sync.
+- No live multiplayer or GPS.
+- No official WHS handicap calculation (we display an estimate only).
+
+3) USERS & USE CASES
+- Casual foursome: Quickly add names and record strokes on a shared phone.
+- Solo practice: Track a personal round, see progress vs par.
+- League night: 4–6 players; speed entry is critical.
+
+4) KEY ASSUMPTIONS
+- Stroke-play scoring.
+- Courses may vary; users can set par per hole.
+- Optional inputs for Course Rating and Slope (defaults: Rating 72.0, Slope 113) to compute a simple one-round handicap differential estimate (not official).
+
+5) CORE FEATURES & REQUIREMENTS
+
+5.1 Round Setup
+- Choose Holes: 9 or 18 (default 18).
+- Players: add/edit/remove; name required; 1–20 chars; unique within round (auto-append number if duplicate).
+- Course Settings (optional):
+  - Course Name (text)
+  - Course Par (auto-sum of per-hole par; read-only)
+  - Course Rating (float; default 72.0; 67.0–77.0 allowed)
+  - Course Slope (int; default 113; 55–155 allowed)
+- Par Table: For holes 1–9 (and 10–18 if selected), set per-hole par (integers 3–5, allow 2–6 for flexibility). Provide presets:
+  - Standard 18 (4/4/3/4/5/4/3/4/4 // 4/5/4/3/4/4/5/3/4)
+  - Standard 9 (first 9 of above)
+
+5.2 Score Entry (Scorecard)
+- Grid with holes as columns and players as rows (horizontally scrollable on mobile).
+- Each cell: numeric input for strokes (≥1, ≤15); quick +/– buttons; long-press to clear.
+- Sticky left column shows player name; sticky top row shows hole number and par.
+- Real-time computed columns: Front 9, Back 9, Total, ±Par.
+- Autosave on every change.
+
+5.3 Round Summary (End Round)
+- Per player: Gross Total, ±Par, Front 9, Back 9, Estimated Handicap Differential (see 8)
+- Winner banner:
+  - Default: Lowest Total Strokes (Gross).
+  - Tie-breaker: lowest Back 9; if still tied, lowest last 6, then last 3, then hole 18; if still tied, Tie.
+- Calls to action: Start New Round (keeps players & course template, clears strokes) and Full Reset.
+
+5.4 Rounds History (Optional)
+- Local list of previous completed rounds with date/time, course, winner. Tap to view (read-only).
+
+5.5 Persistence & Reset
+- Autosave all state to localStorage on change: current round (players, par per hole, strokes, course rating/slope), and history (if enabled).
+- Reset button (prominent in Settings):
+  - Confirmation modal: “This will erase all saved data on this device.”
+  - On confirm: clear all app keys in localStorage and reload to a fresh state.
+
+6) USER FLOWS (HAPPY PATHS)
+1. Start a Round: Landing → Start Round → Add Players → Select 9/18 → Review/Set Pars → (Optional) Course Rating/Slope → Go to Scorecard.
+2. Enter Scores: On each hole, enter strokes for each player → values autosave → running totals & ±Par update live.
+3. End Round: Tap End Round → Summary shows totals, ±Par, estimated handicap differential, and winner → Start New Round or Reset.
+4. Reset: Settings → Reset → Confirm → localStorage cleared → Landing.
+
+7) SCREENS & UI REQUIREMENTS
+
+7.1 Landing / Start
+- Title, brief description.
+- Primary button: Start Round.
+- Secondary: Settings/Reset.
+
+7.2 Setup
+- Players: list with Add Player (max 6 for MVP), inline rename, delete, drag to reorder.
+- Holes: 9/18 segmented control.
+- Course (optional accordion): Course Name, Rating (number), Slope (number).
+- Par Editor: Scrollable row of cards/inputs per hole: “H1 (Par 4)” with stepper. Presets: Standard 18 / Standard 9.
+- Primary: Go to Scorecard (disabled until ≥1 player).
+
+7.3 Scorecard
+- Sticky header: hole numbers + per-hole par under each.
+- Rows: player name (sticky left), per-hole stroke inputs, computed totals at right.
+- Footer bar: End Round, Settings, Undo (last input), Redo (optional).
+- Empty state hint for unscored hole: “Enter strokes”.
+
+7.4 Summary
+- Cards per player: Name, Gross, ±Par, F9, B9, Estimated Handicap Diff.
+- Winner banner at top with subtle confetti.
+- Buttons: Start New Round, Share Screenshot (optional), Back to Scorecard.
+
+7.5 Settings
+- Theme toggle (Light/Dark).
+- Course presets (manage).
+- Reset App (destructive).
+
+Accessibility
+- Minimum 44px tap targets.
+- High-contrast mode support.
+- Inputs labeled; error states with text, not just color.
+
+8) SCORING & HANDICAP ESTIMATION
+
+8.1 Totals
+- Gross Total = sum of strokes entered.
+- Course Par = sum of per-hole par.
+- ±Par = Gross Total – Course Par.
+
+8.2 Winner
+- Default: Lowest Gross Total wins.
+- Tie-breakers: Back 9 → last 6 → last 3 → hole 18 → Tie.
+
+8.3 Estimated Handicap Differential (Single-Round, Non-Official)
+If Course Rating and Slope are provided (defaults 72.0 and 113), compute:
+Differential = ((Adjusted Gross Score – Course Rating) × 113) / Slope
+Estimated Handicap (single-round display) = 0.96 × Differential
+- Adjusted Gross Score (MVP): use Gross Total (no ESC/net double bogey caps in MVP).
+- Display with 1 decimal, prefixed “Est.” and a tooltip: “Not an official WHS Handicap Index. For reference only.”
+If Rating/Slope not provided, show “—” and a hint: “Add Course Rating & Slope in Setup to see an estimate.”
+
+9) DATA MODEL (LOCAL STORAGE)
+
+Keys
+- golf.currentRound (object)
+- golf.history (array of completed rounds; optional)
+- golf.settings (theme, limits)
+
+Types (TS-style)
+type HolePar = number;      // 2..6
+type HoleStrokes = number;  // 1..15
+
+interface Player {
+  id: string;         // uuid
+  name: string;
+  strokes: (HoleStrokes | null)[]; // length 9 or 18
+}
+
+interface Course {
+  name?: string;
+  rating?: number;  // default 72.0
+  slope?: number;   // default 113
+  pars: HolePar[];  // length 9 or 18
+}
+
+interface RoundState {
+  holes: 9 | 18;
+  players: Player[];
+  course: Course;
+  startedAt: string; // ISO
+}
+
+interface RoundResult {
+  id: string;
+  round: RoundState;
+  finishedAt: string; // ISO
+  totals: {
+    [playerId: string]: {
+      gross: number;
+      vsPar: number;
+      front9: number;
+      back9: number;
+      estHandicapDiff?: number;
+    }
+  };
+  winner: { playerId: string }[]; // multiple if tie
+}
+
+10) VALIDATION & EDGE CASES
+- Player name required; trim whitespace; auto-dedupe.
+- Strokes must be integers ≥1; empty means “not played yet”.
+- End Round disabled until every player has strokes for every selected hole.
+- Switching 18→9 holes prompts confirmation (truncates data for holes 10–18).
+- Reset requires confirmation (two-step).
+- If any numeric overflow/out-of-range input occurs, revert and show inline error.
+
+11) PERFORMANCE & TECH
+- Mobile-first responsive web app (Vanilla TS/React allowed).
+- State kept in memory; debounce writes to localStorage.
+- No external network required.
+- PWA (optional): service worker, offline cache for assets.
+
+12) PRIVACY & SECURITY
+- No cloud services. All data stays on device in localStorage.
+- Clear privacy note on Landing.
+
+13) ANALYTICS (LOCAL ONLY, OPTIONAL)
+- Count rounds played, average players/round (stored locally, user-visible only).
+
+14) ACCEPTANCE CRITERIA (MVP)
+1. User can add ≥1 player, set 9/18 holes, set per-hole par, and navigate to Scorecard.
+2. Scorecard allows per-hole strokes entry for each player; totals and ±Par update live.
+3. End Round shows per-player Gross, ±Par, F9, B9, Est. Handicap (when Rating/Slope present), and the Winner with tie-break rules.
+4. Reloading the app preserves current round and any finished rounds (if history enabled).
+5. Reset clears all saved data; app returns to fresh Landing.
+6. Works offline in a mobile browser; layout remains usable (no horizontal scroll for actions; only the score grid may scroll).
+
+15) QA SCENARIOS
+- Two-player, 9-hole: enter all strokes; verify totals and winner.
+- Tie on Gross: simulate equal totals; verify tie-break cascade.
+- Handicap estimate: set Rating=71.2, Slope=125; verify formula computation with known values.
+- Switch 18→9 mid-round: confirm prompt and data truncation.
+- Reset: after multiple rounds, confirm storage cleared.
+- Offline: disable network; continue entering scores; reload works.
+
+16) IMPLEMENTATION NOTES (FOR THE DEVELOPER/CLAUDE)
+- Use a small state store (e.g., zustand or simple context) with localStorage persistence (key prefix golf.*).
+- Utility functions:
+  - sum(array), front9Total(player), back9Total(player), total(player), vsPar(player, course).
+  - winner(players, course) implementing the tie-break chain.
+  - handicapDiff(gross, rating=72, slope=113).
+- Componentization:
+  - SetupScreen, ParEditor, PlayersEditor, ScorecardGrid, SummaryScreen, Settings.
+- Keyboard: numeric keypad (inputmode="numeric", pattern="[0-9]*").
+- Persist on blur, change, and throttled on input.
+- Guard localStorage access (try/catch) and fall back to in-memory if disabled.
+- Simple theming via CSS variables; prefers-color-scheme for dark mode.
+
+17) COPY (UI TEXT)
+- Landing: “Keep score. Offline. On your phone.”
+- Buttons: Start Round / Go to Scorecard / End Round / Start New Round / Reset App / Add Player
+- Empty cells: “—”
+- Winner: “Winner: {Name} (Lowest Gross)”
+- Handicap tooltip: “Estimated from this round; not WHS official.”
+
+18) FUTURE ENHANCEMENTS (BACKLOG)
+- Stableford/net scoring modes.
+- ESC/Net Double Bogey adjustments.
+- Export CSV / Image share.
+- Multi-round handicap index estimates (best differentials).
+- Course templates library.
